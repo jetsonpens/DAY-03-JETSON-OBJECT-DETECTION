@@ -150,17 +150,25 @@
     # enlarge the boundary
     sudo nano /sbin/dphys-swapfile
 
-    # reboot afterwards
-    sudo reboot
+    ```
+-   Change Max Swap
+    ```
+    CONF_SWAPSIZE=4096
+    CONF_MAXSWAP=6074
     ```
 
     ![](resources/jetson-change-swap.png)
 
+    ```
+    # reboot afterwards
+    sudo reboot
+    ```
+
 -   Run the installation script
     ```
-    wget https://github.com/Qengineering/Install-OpenCV-Jetson-Nano/raw/main/OpenCV-4-5-1.sh
-    sudo chmod 755 ./OpenCV-4-5-1.sh
-    ./OpenCV-4-5-1.sh
+    wget https://github.com/Qengineering/Install-OpenCV-Jetson-Nano/raw/main/OpenCV-4-5-0.sh
+    sudo chmod 755 ./OpenCV-4-5-0.sh
+    ./OpenCV-4-5-0.sh
     ```
 -   Run `jtop` to check cuda enabled :
 
