@@ -265,6 +265,9 @@
 
 # Tensor RT
 
+
+![](resources/tensorrt-module.png) 
+
 Deep Learning has a wide range of applications such as Self Driving cars, Aerial Surveillance, Real Time Face Recognition solutions, Real Time Language Processing solutions to name a few. But there is only one similarity among these applications. REAL TIME. Considering the need for real time performance (throughput) of these models, we need to optimize the trained model so that it is lite but provides close to training accuracy.
 
 ![](resources/tensor-rt-result.png)
@@ -280,16 +283,22 @@ With TensorRT, we can do various optimizations effortlessly. The following are f
 -   Kernel Auto Tunning
 -   Dynamic Tensor Memory
 
-### Mixed Precision Inference
-Single Precision Floating Point or FP32 in short is the choice of precision when it comes to Deep Learning training.
+---
 
-![](resources/floating-precission.png)
+- Mixed Precision Inference
+    Single Precision Floating Point or FP32 in short is the choice of precision when it comes to Deep Learning training.
+
+    ![](resources/floating-precission.png)
 
 
-![](resources/floating-precission-2.png)
+    ![](resources/floating-precission-2.png)
 
+    ![](resources/tensorrt-bit.png)
 
-FP32 has 8 bits to represent the exponent and 23 bits to represent the fraction which is ideal for all those gradient calculations and updates. During inference if the model gives close to training accuracy and if it is half as heavy as it is during training then we have the advantage of less memory utilization and high throughput. With TensorRT, we can create a production model that is in FP16 precision or INT 8 or INT 4 precision.
+    FP32 has 8 bits to represent the exponent and 23 bits to represent the fraction which is ideal for all those gradient calculations and updates. During inference if the model gives close to training accuracy and if it is half as heavy as it is during training then we have the advantage of less memory utilization and high throughput. With TensorRT, we can create a production model that is in FP16 precision or INT 8 or INT 4 precision.
+
+    ![](resources/qat-training-precision.png)
+
 
 
 -  Layer Fusion
