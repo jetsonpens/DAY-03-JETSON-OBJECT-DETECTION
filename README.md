@@ -263,6 +263,131 @@
 
 ---
 
+# Tensor RT
+
+Deep Learning has a wide range of applications such as Self Driving cars, Aerial Surveillance, Real Time Face Recognition solutions, Real Time Language Processing solutions to name a few. But there is only one similarity among these applications. REAL TIME. Considering the need for real time performance (throughput) of these models, we need to optimize the trained model so that it is lite but provides close to training accuracy.
+
+TensorRT is a Deep Learning Inference platform from NVIDIA. It is built on NVIDIA CUDA programming model which helps us leverage the massive parallel performance offered by NVIDIA GPUs. Deep Learning models from almost all popular frameworks can be parsed and optimized for low latency and high throughput inference on NVIDIA GPUs using TensorRT.
+
+![](resources/tensor-rt.png)
+    
+With TensorRT, we can do various optimizations effortlessly. The following are few important optimizations that can be done using TensorRT.
+-   Mixed Precision Inference
+-   Layer Fusion
+-   Batching
+-   Kernel Auto Tunning
+-   Dynamic Tensor Memory
+
+### Mixed Precision Inference
+Single Precision Floating Point or FP32 in short is the choice of precision when it comes to Deep Learning training.
+
+![](resources/floating-precission.png)
+
+
+![](resources/floating-precission-2.png)
+
+
+FP32 has 8 bits to represent the exponent and 23 bits to represent the fraction which is ideal for all those gradient calculations and updates. During inference if the model gives close to training accuracy and if it is half as heavy as it is during training then we have the advantage of less memory utilization and high throughput. With TensorRT, we can create a production model that is in FP16 precision or INT 8 or INT 4 precision.
+
+
+-  Layer Fusion
+
+    Before talking about layer fusion let us look at how an instruction is processed. To process an instruction, operands in the memory has to be transferred to the registers, the operation is then carried out by the processor and the results are again copied back to the memory. With this rough idea let us look at layer fusion.
+
+    ![](resources/layer-fusion.png)
+
+    Layers in most of the Deep Learning models follow a sequence. For example, a Convolution layer is followed by a Batch Normalization layer followed by an Activation layer. Here we have three operations to be performed sequentially. Instead of transferring the data back and forth between memory and registers for each operation, through Layer fusion we transfer data once from memory to registers, perform all the three operations sequentially and transfer back the final result to the memory. By doing this we save four costly data transfer cycles.
+
+    ![](resources/tensor-rt-graph.png)
+
+    As shown above, TensorRT recognizes all layers with similar input and filter size but with different weights and combines them to form a single 1x1 CBR layer as shown in the right side.
+
+- Batching
+    GPUs have thousands of processing cores; it is only that we need to use them efficiently. By planning proper batch size of our input data based on the target platform of deployment, we can optimally leverage the huge number of available cores.
+
+- Kernel auto-tuning
+
+    While optimizing models, there is some kernel specific optimization which can be performed during the process. This selects the best layers, algorithms, and optimal batch size based on the target GPU platform. For example, there are multiple ways of performing convolution operation but which one is the most optimal way on this selected platform, TRT opts that automatically.
+
+- Dynamic Tensor Memory
+    TensorRT improves the memory reuse by allocating memory to tensor only for the duration of its usage. It helps in reducing the memory footprints and avoiding allocation overhead for fast and efficient execution.
+
+- Multiple Stream Execution
+    TensorRT is designed to process multiple input streams in parallel. This is basically Nvidia’s CUDA stream.
+
+
+## Using Tensorflow-TensorRT (TF-TRT) API
+Now we have seen the process, how TRT optimizes the model for faster inference and lower latency. Next, we will look into Tensorflow-TRT API for optimizing our deep learning models for faster inference.
+
+Setting up environment for TensorRT:
+
+To setup TensorRT on your system execute the below commands in terminal to setup TensorRT on 64 bit Ubuntu 18.04 and TensorFlow≥2.0
+We need to install NVIDIA machine learning package, libnvinfer5 and TensorFlow-GPU only if we want to use NVIDIA GPU while optimization.
+
+```
+pip install tensorflow-gpu==2.0.0
+
+wget https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/nvidia-machine-learning-repo-ubuntu1804_1.0.0-1_amd64.deb
+  
+dpkg -i nvidia-machine-learning-repo-*.deb
+apt-get update
+
+sudo apt-get install libnvinfer5
+```
+
+First of all we import trt_converter and a per-trained resnet50 model, on which the optimization needs to be performed. If we want our model to get optimized in FP16 or Fp32 precision then we can just change precision_mode parameter in conversion parameters. Also, we can setup max_workspace_size_bytes parameter which indicates your maximum RAM capacity on your system.
+
+```
+from tensorflow.python.compiler.tensorrt import trt_convert as trt
+from tensorflow.keras.applications.resnet50 import ResNet50
+
+model = ResNet50(weights='imagenet')
+
+
+print('Converting to TF-TRT FP32...')
+conversion_params = trt.DEFAULT_TRT_CONVERSION_PARAMS._replace(precision_mode=trt.TrtPrecisionMode.FP32,
+                                                               max_workspace_size_bytes=8000000000)
+
+converter = trt.TrtGraphConverterV2(input_saved_model_dir='resnet50_saved_model',
+                                    conversion_params=conversion_params)
+converter.convert()
+converter.save(output_saved_model_dir='resnet50_saved_model_TFTRT_FP32')
+print('Done Converting to TF-TRT FP32')
+```
+
+But, while converting precision to INT8 we also need calibration data as described previously in this post and we can pass this calibration input data while calling the convert function. The code snippet is shown below.
+
+```
+batch_size = 8
+batched_input = np.zeros((batch_size, 224, 224, 3), dtype=np.float32)
+
+for i in range(batch_size):
+  img_path = './data/img%d.JPG' % (i % 4)
+  img = image.load_img(img_path, target_size=(224, 224))
+  x = image.img_to_array(img)
+  x = np.expand_dims(x, axis=0)
+  x = preprocess_input(x)
+  batched_input[i, :] = x
+batched_input = tf.constant(batched_input)
+print('batched_input shape: ', batched_input.shape)
+
+print('Converting to TF-TRT INT8...')
+conversion_params = trt.DEFAULT_TRT_CONVERSION_PARAMS._replace(
+    precision_mode=trt.TrtPrecisionMode.INT8, 
+    max_workspace_size_bytes=8000000000, 
+    use_calibration=True)
+converter = trt.TrtGraphConverterV2(
+    input_saved_model_dir='resnet50_saved_model', 
+    conversion_params=conversion_params)
+
+def calibration_input_fn():
+    yield (batched_input, )
+converter.convert(calibration_input_fn=calibration_input_fn)
+
+converter.save(output_saved_model_dir='resnet50_saved_model_TFTRT_INT8')
+print('Done Converting to TF-TRT INT8')
+```
+
 ## TIPS!
 
 ### 1. Free up memory by disabling GUI
@@ -280,6 +405,8 @@
 
 # Source
 
+- https://developer.nvidia.com/embedded/jetson-nano-dl-inference-benchmarks
+- https://developer.nvidia.com/blog/tensorrt-3-faster-tensorflow-inference/
 -   https://qengineering.eu/install-opencv-4.5-on-jetson-nano.html
 -   https://www.datacamp.com/community/tutorials/object-detection-guide
 -   https://www.pyimagesearch.com/2020/06/29/opencv-selective-search-for-object-detection/
