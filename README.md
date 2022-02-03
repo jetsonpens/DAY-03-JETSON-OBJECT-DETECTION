@@ -267,6 +267,8 @@
 
 Deep Learning has a wide range of applications such as Self Driving cars, Aerial Surveillance, Real Time Face Recognition solutions, Real Time Language Processing solutions to name a few. But there is only one similarity among these applications. REAL TIME. Considering the need for real time performance (throughput) of these models, we need to optimize the trained model so that it is lite but provides close to training accuracy.
 
+![](resources/tensor-rt-result.png)
+
 TensorRT is a Deep Learning Inference platform from NVIDIA. It is built on NVIDIA CUDA programming model which helps us leverage the massive parallel performance offered by NVIDIA GPUs. Deep Learning models from almost all popular frameworks can be parsed and optimized for low latency and high throughput inference on NVIDIA GPUs using TensorRT.
 
 ![](resources/tensor-rt.png)
